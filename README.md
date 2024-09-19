@@ -10,7 +10,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Setup Gemini API key
-touch .env
+.env
 # Enter your Google Gemini API Key in ".env" like this:
 # GOOGLE_API_KEY="..."
 
