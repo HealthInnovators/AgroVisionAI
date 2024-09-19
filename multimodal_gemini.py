@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv("GOOGLE_API_KEY")
 google_api_key = os.getenv("GOOGLE_API_KEY")
-genai.configure(api_key="AIzaSyCrZQ4BG5ENkOJIu9waXY0jytwuEd6MG2E")
+genai.configure(api_key="your_api_key")
 from google.api_core import retry
 
 gemini_retry = retry.Retry(
