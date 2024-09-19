@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dermatologist Chatbox - Healthi.AI</title>
+    <link rel="icon" href="{{ url_for('static', filename='agri.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-header" class="header">
+            <img src="static/agri.png" alt="HealthiAI_Logo">
+            <div class="healthiai-logo">AgroVision AI</div>
+            <div class="username">username</div>
+            <img src="static/mask.png" alt="User Avatar" class="Avatar">
+        </div>
+        <div id="chat-nav" class="header">
+            <div id="nav-title">Chatbox</div>
+            <div class="nav-separator">&rsaquo;</div>
+            <div id="nav-username" class="username">username</div>
+        </div>
+        
+        <div id="chatbox"></div>
+        <form id="input-area">
+            <div id="input-container">
+                <input type="text" id="message" placeholder="Hi, doctor! I have some skin conditions...">
+                <button id="recordButton" type="button">
+                    <img src="static/microphone_off.png" alt="Microphone" id="micIcon">
+                </button>
+                <input type="file" id="mediaUpload" accept="image/*, video/*" style="display: none;">
+                <button id="imageButton" type="button">
+                    <img src="static/image.png" alt="image" id="imageIcon">
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        var username = "Srikanth";
+        var usernameDivs = document.querySelectorAll('.username');
+        usernameDivs.forEach(function(div) {
+            div.textContent = username;
+        });
+
+
+        const userAvatar = 'static/mask.png';
+        const botAvatar = 'static/doctor.png';
+        const scanAvatar = 'static/scan.png';
+        const microphone_off = 'static/microphone_off.png';
+        const microphone_on = 'static/microphone_on.png';
+
+        const questionnaire = `
+    <form id="questionnaire">
+        <p>Please provide the following information so that we can better analyze your Agriculture condition.</p>
+        <br>
+        <div>
+            <label for="language">Language:</label>
+            <select id="language" name="language">
+                <option value="Tamil">Tamil</option>
+                <option value="English">English</option>
+                <option value="Spanish">Spanish</option>
+                <option value="French">French</option>
+                <option value="German">German</option>
+                <option value="Chinese">Chinese</option>
+            </select>
+        </div>
+        <div>
+            <label for="croptype">Crop Type:</label>
+            <input type="text" id="croptype" name="croptype">
+        </div>
+        <div>
+            <label for="location">Location:</label>
+            <input type="text" id="location" name="location">
+        </div>
+        <div>
+            <label for="plantingdate">Planting Month:</label>
+            <select id="plantingdate" name="plantingdate">
+                <option value="January">January</option>
+                <option value="February">February</option>
+                <option value="March">March</option>
+                <option value="April">April</option>
+                <option value="May">May</option>
+                <option value="June">June</option>
+                <option value="July">July</option>
+                <option value="August">August</option>
+                <option value="September">September</option>
+                <option value="October">October</option>
+                <option value="November">November</option>
+                <option value="December">December</option>
+            </select>
+        </div>
+        <p><i>*Your information will <b>NOT</b> be shared with anyone, and <b>ONLY</b> be available for this session.</i></p>
+        <br>
+        <button type="submit" id="submit">Submit</button>
+    </form>
+`;
+        questionnaire_id = sendTmpMessage(botAvatar, questionnaire);
+
+        function sendTmpMessage(avatar, message) {
+            const analyzingMessageId = `tmp-message-${Date.now()}`;
+            const botAnalyzingMessage = document.createElement('div');
+            botAnalyzingMessage.id = analyzingMessageId;
+            botAnalyzingMessage.classList.add('message-container', 'bot-message');
+            botAnalyzingMessage.innerHTML = `<img src=${avatar} class="avatar"><div class="message">${message}</div>`;
+            chatbox.appendChild(botAnalyzingMessage);
+            chatbox.scrollTop = chatbox.scrollHeight;
+            return analyzingMessageId
+        }
+
+        function generateResponse(apiCall, message) {
+            let avatar;
+            let tmpMessage;
+            if (apiCall == "/chat") {
+                avatar = botAvatar;
+                tmpMessage = "Thinking...";
+            } else if (apiCall == "/media_analyze") {
+                avatar = scanAvatar;
+                tmpMessage = "Analyzing file...";
+            }
+            const tmpMessageId = sendTmpMessage(avatar, tmpMessage);
+            fetch(apiCall, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `message=${message}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                const tmpMessageElement = document.getElementById(tmpMessageId);
+                if (tmpMessageElement) {
+                    tmpMessageElement.innerHTML = `<img src=${avatar} class="avatar"><div class="message">${data.message}</div>`;
+                }
+                chatbox.scrollTop = chatbox.scrollHeight;
+                show_recommand_question();
+            });
+        }
+
+        function show_recommand_question() {
+            fetch("/get-recommand-question", {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.recommand_question)
+                document.getElementById("message").placeholder=data.recommand_question;
+            });
+        }
+
+        function sendUserMessage(content) {
+            const chatbox = document.getElementById('chatbox');
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.classList.add('message-container', 'user-message');
+            userMessageDiv.innerHTML = `<img src=${userAvatar} class="avatar"><div class="message">${content}</div>`;
+            chatbox.appendChild(userMessageDiv);
+        }
+
+        function formDataToString(formData) {
+            const entries = formData.entries();
+            const data = {};
+            for (const [key, value] of entries) {
+                data[key] = value;
+            }
+            return `Here is my information, which may help you better analyze my conditions: language: ${data.language}; croptype: ${data.croptype}; location: ${data.location}; plantingdate: ${data.plantingdate};`;
+        }
+
+        document.getElementById('questionnaire').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            user_info_message = formDataToString(formData);
+            const questionnaire_message = document.getElementById(questionnaire_id);
+            questionnaire_message.innerHTML = `<img src=${botAvatar} class="avatar"><div class="message">Thank you! Your information is submitted.</div>`
+
+            generateResponse("/chat", user_info_message);
+        });
+
+        document.getElementById('input-area').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const messageInput = document.getElementById('message');
+            let message = messageInput.value.trim();
+            messageInput.value = '';
+            if (message === '') {
+                message = document.getElementById("message").placeholder;
+            }
+            sendUserMessage(message);
+            generateResponse("/chat", message);
+        });
+
+        document.getElementById('imageButton').addEventListener('click', function() {
+            document.getElementById('mediaUpload').click();
+        });
+
+        document.getElementById('mediaUpload').addEventListener('change', function() {
+            const file = this.files[0];
+            const formData = new FormData();
+            formData.append('media', file);
+
+            fetch('/upload_media', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                let fileContent;
+                if (file.type.startsWith('image/')) {
+                    fileContent = `<img src="${data.url}" alt="uploaded image">`;
+                } else if (file.type.startsWith('video/')) {
+                    fileContent = `<video controls><source src="${data.url}" type="${file.type}"></video>`;
+                }
+                else if (file.type.startsWith('audio/')) {
+                    // If the file is an audio, display it using an <audio> element
+                    fileContent = `<audio controls><source src="${data.url}" type="${file.type}"></audio>`;
+                }
+                else {
+                    fileContent = `Unsupported file type: ${file.type}`;
+                }
+                sendUserMessage(fileContent);
+                generateResponse("/media_analyze", data.url);
+            });
+        });
+
+        let mediaRecorder;
+        let audioChunks = [];
+        const recordButton = document.getElementById('recordButton');
+
+        recordButton.addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+                document.getElementById('micIcon').src = 'static/microphone_off.png';
+            } else {
+                startRecording();
+                document.getElementById('micIcon').src = 'static/microphone_on.png';
+            }
+        });
+
+        async function startRecording() {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                audioChunks = [];
+                sendData(audioBlob);
+            };
+            mediaRecorder.start();
+        }
+
+        function sendData(audioBlob) {
+            const formData = new FormData();
+            formData.append('audio', audioBlob);
+
+            fetch('/transcript', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                messageInput = document.getElementById("message");
+                const currentText = messageInput.value;
+                messageInput.value = currentText ? currentText + " " + data.transcript : data.transcript;
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>
